@@ -48,6 +48,12 @@ This integration creates the following entities for each configured node. The no
 | :--- | :--- |
 | **Reachable** | A connectivity sensor that is `On` if the node is reachable by Home Assistant. |
 
+### Device Tracker
+
+| Entity | Description |
+| :--- | :--- |
+| **`[Node Name]`** | A device tracker representing the physical GPS location of the node, _as reported by the node itself_. |
+
 ### Sensors
 
 | Entity | Description | Category |
@@ -61,9 +67,12 @@ This integration creates the following entities for each configured node. The no
 | **Mesh RF SSID** | The SSID of the mesh radio. | |
 | **Mesh RF Frequency** | The frequency of the mesh radio in MHz. | |
 | **Mesh RF Channel Bandwidth** | The channel bandwidth of the mesh radio in MHz. | |
+| **Antenna Beamwidth** | The beamwidth of the RF antenna in degrees. | Diagnostic (Disabled by default) |
+| **Antenna Gain** | The gain of the RF antenna in dBi. | Diagnostic (Disabled by default) |
 | **API Version** | The version of the node's `sysinfo` API. | Diagnostic |
 | **Active Tunnels** | The number of active tunnels on the node. | Diagnostic |
 | **Boot Time** | A timestamp of when the node was last booted. | Diagnostic |
 | **Free Memory** | The amount of free memory in Kilobytes. | Diagnostic |
+| **Gridsquare** | The Maidenhead grid square of the node. | Diagnostic |
 | **Load (1m / 5m / 15m)** | The 1, 5, and 15-minute system load averages. | Diagnostic |
 | **Interface `[name]`** | The IP address of a given network interface (e.g., `br-lan`). | Diagnostic (Disabled by default) |
