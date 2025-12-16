@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.const import UnitOfFrequency, UnitOfInformation
@@ -46,6 +47,11 @@ def _get_meshrf_value(key: str) -> Callable[[dict[str, Any]], str | int | None]:
     return lambda data: data.get("meshrf", {}).get(key)
 
 
+def _get_antenna_value(key: str) -> Callable[[dict[str, Any]], str | int | None]:
+    """Get a value from the antenna dict within meshrf."""
+    return lambda data: data.get("meshrf", {}).get("antenna", {}).get(key)
+
+
 def _get_tunnels_value(key: str) -> Callable[[dict[str, Any]], str | int | None]:
     """Get a value from the tunnels dict."""
     return lambda data: data.get("tunnels", {}).get(key)
@@ -58,6 +64,13 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         icon="mdi:api",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.get("api_version"),
+    ),
+    ArednNodeSensorEntityDescription(
+        key="gridsquare",
+        name="Gridsquare",
+        icon="mdi:grid",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("gridsquare"),
     ),
     ArednNodeSensorEntityDescription(
         key="freememory",
@@ -74,7 +87,9 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         icon="mdi:chart-line",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.get("sysinfo", {}).get("loads", [None])[0],
+        value_fn=lambda data: data.get("sysinfo", {}).get("loads", [None, None, None])[
+            0
+        ],
     ),
     ArednNodeSensorEntityDescription(
         key="load_5m",
@@ -82,7 +97,9 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         icon="mdi:chart-line",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.get("sysinfo", {}).get("loads", [None, None])[1],
+        value_fn=lambda data: data.get("sysinfo", {}).get("loads", [None, None, None])[
+            1
+        ],
     ),
     ArednNodeSensorEntityDescription(
         key="load_15m",
@@ -123,6 +140,24 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:arrow-expand-horizontal",
         value_fn=_get_meshrf_value("chanbw"),
+    ),
+    ArednNodeSensorEntityDescription(
+        key="antenna_gain",
+        name="Antenna Gain",
+        icon="mdi:antenna",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        native_unit_of_measurement="dBi",
+        value_fn=_get_antenna_value("gain"),
+    ),
+    ArednNodeSensorEntityDescription(
+        key="antenna_beamwidth",
+        name="Antenna Beamwidth",
+        icon="mdi:angle-acute",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        native_unit_of_measurement="°",
+        value_fn=_get_antenna_value("beamwidth"),
     ),
     ArednNodeSensorEntityDescription(
         key="link_info",
