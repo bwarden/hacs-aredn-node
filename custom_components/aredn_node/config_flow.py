@@ -26,6 +26,46 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle a reconfiguration flow initialized by the user."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        assert entry
+
+        errors: dict[str, str] = {}
+
+        if user_input:
+            try:
+                await self._test_credentials(
+                    host=user_input[CONF_HOST],
+                )
+            except ArednNodeApiClientCommunicationError:
+                errors["base"] = "cannot_connect"
+            except ArednNodeApiClientError as e:
+                LOGGER.exception(e)
+                errors["base"] = "unknown"
+            else:
+                self.hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, **user_input}
+                )
+                await self.hass.config_entries.async_reload(entry.entry_id)
+                return self.async_abort(reason="reconfigure_successful")
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST, default=entry.data.get(CONF_HOST)
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
     async def async_step_user(
         self,
         user_input: dict | None = None,
@@ -67,7 +107,7 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if hosts_to_check:
             results = await asyncio.gather(
                 *(self._test_credentials(host) for host in hosts_to_check),
-                return_exceptions=True,
+                return_exceptions=True,  # Allow individual checks to fail
             )
             for result in results:
                 if not isinstance(result, Exception) and isinstance(result, dict):
@@ -97,7 +137,6 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _test_credentials(self, host: str) -> dict[str, Any]:
         """Validate credentials."""
-        LOGGER.debug("Attempting to connect to host %s", host)
         return await self._get_data(host)
 
     async def _get_data(self, host: str) -> dict[str, Any]:
