@@ -103,21 +103,42 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception as e:
             LOGGER.debug("Could not determine gateways with netifaces: %s", e)
 
-        discovered_hosts = []
-        if hosts_to_check:
+        discovered_hosts = set()
+        checked_hosts = set()
+
+        # Perform a 2-level discovery
+        for i in range(2):
+            # Only check hosts we haven't already processed
+            hosts_to_probe = hosts_to_check - checked_hosts
+            if not hosts_to_probe:
+                break
+
+            LOGGER.debug("Discovery pass %d, probing: %s", i + 1, hosts_to_probe)
+            checked_hosts.update(hosts_to_probe)
+
             results = await asyncio.gather(
-                *(self._test_credentials(host) for host in hosts_to_check),
-                return_exceptions=True,  # Allow individual checks to fail
+                *(self._get_data(host) for host in hosts_to_probe),
+                return_exceptions=True,
             )
+
             for result in results:
-                if not isinstance(result, Exception) and isinstance(result, dict):
-                    discovered_hosts.append(result["host"])
+                if isinstance(result, Exception) or not isinstance(result, dict):
+                    continue
+
+                # Add the valid host to our discovered list
+                discovered_hosts.add(result["host"])
+
+                # Add linked nodes to the list for the next pass
+                for link_ip, link_data in result.get("link_info", {}).items():
+                    hosts_to_check.add(link_ip)
+                    if hostname := link_data.get("hostname"):
+                        hosts_to_check.add(hostname)
 
         schema = {}
-        if discovered_hosts:
+        if discovered_hosts_list := sorted(list(discovered_hosts)):
             schema[vol.Required(CONF_HOST)] = selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=discovered_hosts,
+                    options=discovered_hosts_list,
                     mode=selector.SelectSelectorMode.DROPDOWN,
                     custom_value=True,
                 )
