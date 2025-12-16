@@ -11,5 +11,4 @@
   "documentation": "https://github.com/bwarden/hacs-aredn-node",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/bwarden/hacs-aredn-node/issues",
-  "version": "0.1.0"
 }
