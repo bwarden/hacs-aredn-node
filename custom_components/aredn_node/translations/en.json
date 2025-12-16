@@ -9,7 +9,7 @@
             }
         },
         "error": {
-            "cannot_connect": "Unable to connect to the AREDN node. Please check the host and credentials.",
+            "cannot_connect": "Unable to connect to the AREDN node. Please check the host.",
             "unknown": "Unknown error occurred."
         },
         "abort": {

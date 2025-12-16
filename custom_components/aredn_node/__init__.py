@@ -31,7 +31,7 @@ async def async_setup_entry(
         hass=hass,
         logger=LOGGER,
         name=DOMAIN,
-        update_interval=timedelta(minutes=5),
+        update_interval=timedelta(seconds=60),
     )
     entry.runtime_data = ArednNodeData(
         client=ArednNodeApiClient(

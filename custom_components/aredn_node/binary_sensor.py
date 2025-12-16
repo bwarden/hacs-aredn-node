@@ -1,4 +1,4 @@
-"""Binary sensor platform for integration_blueprint."""
+"""Binary sensor platform for AREDN Node integration."""
 
 from __future__ import annotations
 
@@ -9,53 +9,49 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.helpers.entity import EntityCategory
 
-from .entity import IntegrationBlueprintEntity
+from .entity import ArednNodeEntity
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import BlueprintDataUpdateCoordinator
-    from .data import IntegrationBlueprintConfigEntry
+    from .coordinator import ArednNodeDataUpdateCoordinator
+    from .data import ArednNodeConfigEntry
 
-ENTITY_DESCRIPTIONS = (
-    BinarySensorEntityDescription(
-        key="integration_blueprint",
-        name="Integration Blueprint Binary Sensor",
-        device_class=BinarySensorDeviceClass.CONNECTIVITY,
-    ),
+
+ENTITY_DESCRIPTION = BinarySensorEntityDescription(
+    key="reachable",
+    name="Reachable",
+    device_class=BinarySensorDeviceClass.CONNECTIVITY,
+    entity_category=EntityCategory.DIAGNOSTIC,
 )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
-    entry: IntegrationBlueprintConfigEntry,
+    hass: HomeAssistant,  # noqa: ARG001
+    entry: ArednNodeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the binary_sensor platform."""
+    """Set up the binary sensor platform."""
     async_add_entities(
-        IntegrationBlueprintBinarySensor(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in ENTITY_DESCRIPTIONS
+        [ArednNodeReachableSensor(coordinator=entry.runtime_data.coordinator)]
     )
 
 
-class IntegrationBlueprintBinarySensor(IntegrationBlueprintEntity, BinarySensorEntity):
-    """integration_blueprint binary_sensor class."""
+class ArednNodeReachableSensor(ArednNodeEntity, BinarySensorEntity):
+    """AREDN Node reachability sensor."""
 
-    def __init__(
-        self,
-        coordinator: BlueprintDataUpdateCoordinator,
-        entity_description: BinarySensorEntityDescription,
-    ) -> None:
-        """Initialize the binary_sensor class."""
+    def __init__(self, coordinator: ArednNodeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
-        self.entity_description = entity_description
+        self.entity_description = ENTITY_DESCRIPTION
+        self._attr_unique_id = (
+            f"{coordinator.config_entry.entry_id}-{ENTITY_DESCRIPTION.key}"
+        )
 
     @property
     def is_on(self) -> bool:
-        """Return true if the binary_sensor is on."""
-        return self.coordinator.data.get("title", "") == "foo"
+        """Return true if the host is reachable."""
+        return self.coordinator.last_update_success

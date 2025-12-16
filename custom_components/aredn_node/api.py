@@ -19,19 +19,8 @@ class ArednNodeApiClientCommunicationError(
     """Exception to indicate a communication error."""
 
 
-class ArednNodeApiClientAuthenticationError(
-    ArednNodeApiClientError,
-):
-    """Exception to indicate an authentication error."""
-
-
 def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
     """Verify that the response is valid."""
-    if response.status in (401, 403):
-        msg = "Invalid credentials"
-        raise ArednNodeApiClientAuthenticationError(
-            msg,
-        )
     response.raise_for_status()
 
 

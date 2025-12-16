@@ -8,4 +8,4 @@ LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "aredn_node"
 MANUFACTURER = "Amateur Radio Emergency Data Network"
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]

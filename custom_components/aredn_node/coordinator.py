@@ -7,10 +7,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import (
-    ArednNodeApiClientAuthenticationError,
-    ArednNodeApiClientError,
-)
+from .api import ArednNodeApiClientError
 
 if TYPE_CHECKING:
     from .data import ArednNodeConfigEntry
@@ -26,7 +23,5 @@ class ArednNodeDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via library."""
         try:
             return await self.config_entry.runtime_data.client.async_get_data()
-        except ArednNodeApiClientAuthenticationError as exception:
-            raise ConfigEntryAuthFailed(exception) from exception
         except ArednNodeApiClientError as exception:
             raise UpdateFailed(exception) from exception
