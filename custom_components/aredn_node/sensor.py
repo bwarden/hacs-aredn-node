@@ -60,27 +60,6 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("api_version"),
     ),
     ArednNodeSensorEntityDescription(
-        key="boot_time",
-        name="Boot Time",
-        device_class=SensorDeviceClass.TIMESTAMP,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: (
-            (
-                now := utcnow(),
-                days_match := re.search(r"(\d+)\s+days?", uptime_str),
-                time_match := re.search(r"(\d+):(\d+)", uptime_str),
-                now
-                - timedelta(
-                    days=int(days_match.group(1)) if days_match else 0,
-                    hours=int(time_match.group(1)) if time_match else 0,
-                    minutes=int(time_match.group(2)) if time_match else 0,
-                ),
-            )[-1]
-            if (uptime_str := data.get("sysinfo", {}).get("uptime")) is not None
-            else None
-        ),
-    ),
-    ArednNodeSensorEntityDescription(
         key="freememory",
         name="Free Memory",
         native_unit_of_measurement=UnitOfInformation.KILOBYTES,
@@ -190,6 +169,8 @@ async def async_setup_entry(
         )
         for entity_description in ENTITY_DESCRIPTIONS
     ]
+
+    entities.append(ArednNodeBootTimeSensor(coordinator=coordinator))
 
     # Dynamically create sensors for each link type
     link_types = set()
@@ -328,3 +309,51 @@ class ArednNodeLinkTypeSensor(ArednNodeEntity, SensorEntity):
                 if link.get("linkType") == self._link_type:
                     links.append(link.get("hostname"))
         return {"links": links}
+
+
+class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
+    """AREDN Node boot time sensor with update threshold."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: ArednNodeDataUpdateCoordinator) -> None:
+        """Initialize the boot time sensor."""
+        super().__init__(coordinator)
+        node_name = coordinator.data.get("node")
+        self._attr_name = f"{node_name} Boot Time"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-boot_time"
+
+    def _calculate_boot_time(self) -> datetime | None:
+        """Calculate the boot time from the uptime string."""
+        uptime_str = self.coordinator.data.get("sysinfo", {}).get("uptime")
+        if not uptime_str:
+            return None
+
+        now = utcnow()
+        days_match = re.search(r"(\d+)\s+days?", uptime_str)
+        time_match = re.search(r"(\d+):(\d+)", uptime_str)
+
+        boot_time = now - timedelta(
+            days=int(days_match.group(1)) if days_match else 0,
+            hours=int(time_match.group(1)) if time_match else 0,
+            minutes=int(time_match.group(2)) if time_match else 0,
+        )
+        return boot_time.replace(second=0, microsecond=0)
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the state of the sensor."""
+        new_boot_time = self._calculate_boot_time()
+
+        # On first run or if the value is somehow not a datetime, set it.
+        if not isinstance(self._attr_native_value, datetime) or new_boot_time is None:
+            return new_boot_time
+
+        # Only update if the new value is more than 2 minutes different.
+        time_difference = abs(self._attr_native_value - new_boot_time)
+        if time_difference > timedelta(minutes=2):
+            return new_boot_time
+
+        # Otherwise, keep the existing value.
+        return self._attr_native_value
