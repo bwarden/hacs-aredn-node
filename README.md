@@ -27,8 +27,9 @@ This integration uses the `ucode` API endpoint for retrieving data. At this time
 
 The recommended way to install this integration is through the Home Assistant Community Store (HACS).
 
-1.  Search for "AREDN Node" in the HACS integrations tab and install it.
-2.  Restart Home Assistant.
+1. [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bwarden&repository=hacs-aredn-node&category=Integrations)
+2. Download the integration.
+3. Restart Home Assistant.
 
 ## Configuration
 
