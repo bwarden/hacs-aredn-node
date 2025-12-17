@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import re
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
-    SensorEntityDescription,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -22,6 +20,8 @@ from homeassistant.util.dt import utcnow
 from .entity import ArednNodeEntity
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -188,7 +188,7 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
+    hass: HomeAssistant,
     entry: ArednNodeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
@@ -231,16 +231,15 @@ async def async_setup_entry(
     )
 
     # Create sensors for each interface, disabled by default
-    if coordinator.data and "interfaces" in coordinator.data:
-        for interface in coordinator.data["interfaces"]:
-            if "ip" in interface:
-                entities.append(
-                    ArednNodeInterfaceSensor(
-                        coordinator=coordinator,
-                        interface_name=interface["name"],
-                    )
-                )
-
+    if interfaces := coordinator.data.get("interfaces"):
+        entities.extend(
+            ArednNodeInterfaceSensor(
+                coordinator=coordinator,
+                interface_name=interface["name"],
+            )
+            for interface in interfaces
+            if "ip" in interface
+        )
     async_add_entities(entities)
 
 
@@ -338,12 +337,15 @@ class ArednNodeLinkTypeSensor(ArednNodeEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return the state attributes."""
-        links = []
-        if self.coordinator.data and "link_info" in self.coordinator.data:
-            for link in self.coordinator.data["link_info"].values():
-                if link.get("linkType") == self._link_type:
-                    links.append(link.get("hostname"))
-        return {"links": links}
+        if not (link_info := self.coordinator.data.get("link_info")):
+            return {"links": []}
+        return {
+            "links": [
+                v.get("hostname")
+                for v in link_info.values()
+                if v.get("linkType") == self._link_type
+            ]
+        }
 
 
 class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):

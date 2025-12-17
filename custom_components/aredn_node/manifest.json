@@ -4,12 +4,12 @@
   "codeowners": [
     "@bwarden"
   ],
-  "requirements": [
-    "netifaces"
-  ],
   "config_flow": true,
   "documentation": "https://github.com/bwarden/hacs-aredn-node",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/bwarden/hacs-aredn-node/issues",
-  "version": "v1.0.2"
+  "requirements": [
+    "netifaces"
+  ],
+  "version": "v1.0.3"
 }

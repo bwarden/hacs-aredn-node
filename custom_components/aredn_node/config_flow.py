@@ -31,7 +31,8 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Handle a reconfiguration flow initialized by the user."""
         entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
-        assert entry
+        if not entry:
+            return self.async_abort(reason="unknown_error")
 
         errors: dict[str, str] = {}
 
@@ -66,6 +67,69 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    def _process_discovery_result(
+        self,
+        result: dict[str, Any],
+        discovered_nodes: dict[str, str],
+        hosts_to_check: set[str],
+    ) -> None:
+        """Process a single successful discovery result."""
+        if not (node_name := result.get("node")):
+            return
+
+        # Add/update the node in our discovered list, prioritizing specific hostnames.
+        if node_name not in discovered_nodes or "localnode" in discovered_nodes.get(
+            node_name, ""
+        ):
+            discovered_nodes[node_name] = result["host"]
+
+        # Add the node's own FQDN to the check list for the next pass.
+        if (node_fqdn := f"{node_name.lower()}.local.mesh") != result["host"]:
+            hosts_to_check.add(node_fqdn)
+
+        # Add linked nodes to the check list for the next pass.
+        for link_ip, link_data in result.get("link_info", {}).items():
+            if hostname := link_data.get("hostname"):
+                if "." not in hostname:
+                    hostname += ".local.mesh"
+                hosts_to_check.add(hostname)
+            else:
+                hosts_to_check.add(link_ip)
+
+    async def _async_discover_nodes(self) -> dict[str, str]:
+        """Discover AREDN nodes on the network."""
+        hosts_to_check = {"localnode.local.mesh"}
+        try:
+            gateways = netifaces.gateways()
+            for gateway_info in gateways.get("default", {}).values():
+                hosts_to_check.add(gateway_info[0])
+        except OSError as e:
+            LOGGER.debug("Could not determine gateways with netifaces: %s", e)
+
+        discovered_nodes: dict[str, str] = {}  # {node_name: host}
+        checked_hosts = set()
+
+        # Perform a 2-level discovery
+        for i in range(2):
+            # Only check hosts we haven't already processed
+            hosts_to_probe = hosts_to_check - checked_hosts
+            if not hosts_to_probe:
+                break
+
+            LOGGER.debug("Discovery pass %d, probing: %s", i + 1, hosts_to_probe)
+            checked_hosts.update(hosts_to_probe)
+
+            results = await asyncio.gather(
+                *(self._get_data(host) for host in hosts_to_probe),
+                return_exceptions=True,
+            )
+
+            for result in results:
+                if isinstance(result, Exception) or not isinstance(result, dict):
+                    continue
+                self._process_discovery_result(result, discovered_nodes, hosts_to_check)
+        return discovered_nodes
+
     async def async_step_user(
         self,
         user_input: dict | None = None,
@@ -95,66 +159,10 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         # Discover potential nodes
-        hosts_to_check = {"localnode.local.mesh"}
-        try:
-            gateways = netifaces.gateways()
-            for gateway_info in gateways.get("default", {}).values():
-                hosts_to_check.add(gateway_info[0])
-        except Exception as e:
-            LOGGER.debug("Could not determine gateways with netifaces: %s", e)
-
-        discovered_nodes: dict[str, str] = {}  # {node_name: host}
-        checked_hosts = set()
-
-        # Perform a 2-level discovery
-        for i in range(2):
-            # Only check hosts we haven't already processed
-            hosts_to_probe = hosts_to_check - checked_hosts
-            if not hosts_to_probe:
-                break
-
-            LOGGER.debug("Discovery pass %d, probing: %s", i + 1, hosts_to_probe)
-            checked_hosts.update(hosts_to_probe)
-
-            results = await asyncio.gather(
-                *(self._get_data(host) for host in hosts_to_probe),
-                return_exceptions=True,
-            )
-
-            for result in results:
-                if isinstance(result, Exception) or not isinstance(result, dict):
-                    continue
-
-                node_name = result.get("node")
-                if not node_name:
-                    continue
-
-                # Add the valid host to our discovered list, keyed by unique node name
-                # This prevents duplicates if a node is found via IP and hostname
-                # Prioritize specific hostnames over generic ones like 'localnode'.
-                if (
-                    node_name not in discovered_nodes
-                    or "localnode" in discovered_nodes.get(node_name, "")
-                ):
-                    discovered_nodes[node_name] = result["host"]
-
-                # Also try to probe the node by its own name, in case it's different
-                # from the host we used to find it (e.g., via localnode or IP).
-                if (node_fqdn := f"{node_name.lower()}.local.mesh") != result["host"]:
-                    hosts_to_check.add(node_fqdn)
-
-                # Add linked nodes to the list for the next pass
-                for link_ip, link_data in result.get("link_info", {}).items():
-                    # Prioritize hostname, and if it's a short name, make it FQDN
-                    if hostname := link_data.get("hostname"):
-                        if "." not in hostname:
-                            hostname += ".local.mesh"
-                        hosts_to_check.add(hostname)
-                    else:  # Fallback to IP if no hostname
-                        hosts_to_check.add(link_ip)
+        discovered_nodes = await self._async_discover_nodes()
 
         schema = {}
-        if discovered_hosts_list := sorted(list(discovered_nodes.values())):
+        if discovered_hosts_list := sorted(discovered_nodes.values()):
             schema[vol.Required(CONF_HOST)] = selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=discovered_hosts_list,

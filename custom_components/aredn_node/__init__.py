@@ -8,6 +8,7 @@ https://github.com/ludeeus/integration_blueprint
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -18,7 +19,8 @@ from .const import DOMAIN, LOGGER, PLATFORMS
 from .coordinator import ArednNodeDataUpdateCoordinator
 from .data import ArednNodeConfigEntry, ArednNodeData
 
-from homeassistant.core import HomeAssistant
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
