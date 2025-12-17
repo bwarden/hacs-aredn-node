@@ -57,3 +57,8 @@ class ArednNodeReachableSensor(ArednNodeEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return true if the host is reachable."""
         return self.coordinator.last_update_success
+
+    @property
+    def available(self) -> bool:
+        """Report this sensor is always available to show reachability."""
+        return True

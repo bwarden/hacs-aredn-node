@@ -353,6 +353,7 @@ class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _last_boot_time: datetime | None = None
 
     def __init__(self, coordinator: ArednNodeDataUpdateCoordinator) -> None:
         """Initialize the boot time sensor."""
@@ -382,14 +383,15 @@ class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
         """Return the state of the sensor."""
         new_boot_time = self._calculate_boot_time()
 
-        # On first run or if the value is somehow not a datetime, set it.
-        if not isinstance(self._attr_native_value, datetime) or new_boot_time is None:
-            return new_boot_time
+        # On first run or if the value is somehow not a datetime, set the value.
+        if self._last_boot_time is None or new_boot_time is None:
+            self._last_boot_time = new_boot_time
+            return self._last_boot_time
 
         # Only update if the new value is more than 2 minutes different.
-        time_difference = abs(self._attr_native_value - new_boot_time)
+        time_difference = abs(self._last_boot_time - new_boot_time)
         if time_difference > timedelta(minutes=2):
-            return new_boot_time
+            self._last_boot_time = new_boot_time
 
         # Otherwise, keep the existing value.
-        return self._attr_native_value
+        return self._last_boot_time
