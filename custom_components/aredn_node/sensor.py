@@ -374,7 +374,7 @@ class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
             hours=int(time_match.group(1)) if time_match else 0,
             minutes=int(time_match.group(2)) if time_match else 0,
         )
-        return boot_time.replace(second=0, microsecond=0)
+        return boot_time
 
     @property
     def native_value(self) -> datetime | None:
