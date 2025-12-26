@@ -13,7 +13,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
@@ -226,15 +225,15 @@ async def async_setup_entry(
         entry, data={**entry.data, "rf_peers": list(rf_peers)}
     )
 
-    for peer_ip in rf_peers:
-        for description in RF_PEER_SENSOR_DESCRIPTIONS:
-            entities.append(
-                ArednNodeRfPeerSensor(
-                    coordinator=coordinator,
-                    peer_ip=peer_ip,
-                    entity_description=description,
-                )
-            )
+    entities.extend(
+        ArednNodeRfPeerSensor(
+            coordinator=coordinator,
+            peer_ip=peer_ip,
+            entity_description=description,
+        )
+        for peer_ip in rf_peers
+        for description in RF_PEER_SENSOR_DESCRIPTIONS
+    )
 
     entities.append(ArednNodeBootTimeSensor(coordinator=coordinator))
 
@@ -495,7 +494,10 @@ class ArednNodeRfPeerSensor(ArednNodeEntity, SensorEntity):
 
         node_name = coordinator.data.get("node")
         self._attr_name = f"{node_name} {peer_name} {entity_description.name}"
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-peer-{peer_ip}-{entity_description.key}"
+        self._attr_unique_id = (
+            f"{coordinator.config_entry.entry_id}-peer-{peer_ip}-"
+            f"{entity_description.key}"
+        )
 
     @property
     def native_value(self) -> int | None:
