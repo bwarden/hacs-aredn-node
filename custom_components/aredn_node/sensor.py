@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
@@ -239,6 +240,13 @@ async def async_setup_entry(
 
     # Dynamically create sensors for each link type
     link_types = set()
+
+    # Ensure common link types are always included
+    link_types.add("RF")
+    link_types.add("DTD")
+    link_types.add("WIREGUARD")
+
+    # Discover additional link types from current data
     if coordinator.data and "link_info" in coordinator.data:
         for link in coordinator.data["link_info"].values():
             if link_type := link.get("linkType"):
