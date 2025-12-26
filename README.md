@@ -77,3 +77,6 @@ This integration creates the following entities for each configured node. The no
 | **Gridsquare** | The Maidenhead grid square of the node. | Diagnostic |
 | **Load (1m / 5m / 15m)** | The 1, 5, and 15-minute system load averages. | Diagnostic |
 | **Interface `[name]`** | The IP address of a given network interface (e.g., `br-lan`). | Diagnostic (Disabled by default) |
+| **`[Peer]` Signal** | The signal strength of a specific RF peer link. | Diagnostic (Disabled by default) |
+| **`[Peer]` Noise** | The noise level of a specific RF peer link. | Diagnostic (Disabled by default) |
+| **`[Peer]` SNR** | The calculated Signal-to-Noise Ratio of a specific RF peer link. | Diagnostic (Disabled by default) |

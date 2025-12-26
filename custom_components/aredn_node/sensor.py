@@ -13,7 +13,12 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfFrequency, UnitOfInformation
+from homeassistant.const import (
+    SIGNAL_STRENGTH_DECIBELS,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    UnitOfFrequency,
+    UnitOfInformation,
+)
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.dt import utcnow
 
@@ -205,6 +210,31 @@ async def async_setup_entry(
         for entity_description in ENTITY_DESCRIPTIONS
     ]
 
+    # Dynamically create sensors for each RF link
+    rf_peers = set()
+    if coordinator.data and "link_info" in coordinator.data:
+        for peer_ip, link_data in coordinator.data["link_info"].items():
+            if link_data.get("linkType") == "RF":
+                rf_peers.add(peer_ip)
+
+    # Also add previously discovered RF peers so sensors don't disappear
+    if "rf_peers" in entry.data:
+        rf_peers.update(entry.data["rf_peers"])
+
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, "rf_peers": list(rf_peers)}
+    )
+
+    for peer_ip in rf_peers:
+        for description in RF_PEER_SENSOR_DESCRIPTIONS:
+            entities.append(
+                ArednNodeRfPeerSensor(
+                    coordinator=coordinator,
+                    peer_ip=peer_ip,
+                    entity_description=description,
+                )
+            )
+
     entities.append(ArednNodeBootTimeSensor(coordinator=coordinator))
 
     # Dynamically create sensors for each link type
@@ -395,3 +425,76 @@ class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
 
         # Otherwise, keep the existing value.
         return self._last_boot_time
+
+
+RF_PEER_SENSOR_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
+    ArednNodeSensorEntityDescription(
+        key="signal",
+        name="Signal",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.get("signal"),
+    ),
+    ArednNodeSensorEntityDescription(
+        key="noise",
+        name="Noise",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.get("noise"),
+    ),
+    ArednNodeSensorEntityDescription(
+        key="snr",
+        name="SNR",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: (
+            data["signal"] - data["noise"]
+            if "signal" in data and "noise" in data
+            else None
+        ),
+    ),
+)
+
+
+class ArednNodeRfPeerSensor(ArednNodeEntity, SensorEntity):
+    """AREDN Node sensor for a specific RF peer link."""
+
+    entity_description: ArednNodeSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: ArednNodeDataUpdateCoordinator,
+        peer_ip: str,
+        entity_description: ArednNodeSensorEntityDescription,
+    ) -> None:
+        """Initialize the sensor class."""
+        super().__init__(coordinator)
+        self.entity_description = entity_description
+        self._peer_ip = peer_ip
+
+        # Get the hostname for this peer, falling back to the IP
+        peer_info = coordinator.data.get("link_info", {}).get(peer_ip, {})
+        peer_name = peer_info.get("hostname", peer_ip)
+
+        node_name = coordinator.data.get("node")
+        self._attr_name = f"{node_name} {peer_name} {entity_description.name}"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-peer-{peer_ip}-{entity_description.key}"
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the native value of the sensor."""
+        peer_info = self.coordinator.data.get("link_info", {}).get(self._peer_ip)
+
+        if not peer_info or peer_info.get("linkType") != "RF":
+            return None
+
+        return self.entity_description.value_fn(peer_info)
