@@ -236,6 +236,7 @@ async def async_setup_entry(
     )
 
     entities.append(ArednNodeBootTimeSensor(coordinator=coordinator))
+    entities.append(ArednNodeCachedIPSensor(coordinator=coordinator))
 
     # Dynamically create sensors for each link type
     link_types = set()
@@ -432,6 +433,25 @@ class ArednNodeBootTimeSensor(ArednNodeEntity, SensorEntity):
 
         # Otherwise, keep the existing value.
         return self._last_boot_time
+
+
+class ArednNodeCachedIPSensor(ArednNodeEntity, SensorEntity):
+    """AREDN Node cached IP sensor."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:ip-network"
+
+    def __init__(self, coordinator: ArednNodeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        node_name = coordinator.data.get("node")
+        self._attr_name = f"{node_name} IP"
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-ip"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the state of the sensor."""
+        return self.coordinator.cached_ip
 
 
 RF_PEER_SENSOR_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
