@@ -36,11 +36,12 @@ class ArednNodeApiClient:
         self._host = host
         self._session = session
 
-    async def async_get_data(self) -> Any:
+    async def async_get_data(self, host: str | None = None) -> Any:
         """Get data from the API."""
+        target_host = host or self._host
         return await self._api_wrapper(
             method="get",
-            url=f"http://{self._host}/a/sysinfo?nodes=1&link_info=1",
+            url=f"http://{target_host}/a/sysinfo?nodes=1&link_info=1",
         )
 
     async def _api_wrapper(
