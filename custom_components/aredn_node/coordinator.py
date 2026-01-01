@@ -26,7 +26,7 @@ def _split_hostish(raw: str) -> tuple[str, int | None]:
     s = (raw or "").strip()
 
     # Ensure urlsplit can parse host:port reliably
-    if "://" not in s:
+    if "://" not in s: # noqa: SIM108
         split = urlsplit(f"http://{s}")
     else:
         split = urlsplit(s)
