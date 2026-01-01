@@ -38,7 +38,7 @@ async def async_setup_entry(
 
     entry.runtime_data = ArednNodeData(
         client=ArednNodeApiClient(
-            host=entry.data[CONF_HOST],
+            host=entry.data.get(CONF_HOST),
             ssl=entry.data.get(CONF_SSL),
             port=entry.data.get(CONF_PORT),
             session=async_get_clientsession(hass),
