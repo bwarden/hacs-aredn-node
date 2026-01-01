@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 
 
 def _split_hostish(raw: str) -> tuple[str, int | None]:
-    """Return (hostname_or_ip, port) from a stored host field.
+    """
+    Return (hostname_or_ip, port) from a stored host field.
 
     Accepts:
       - host
@@ -26,7 +27,7 @@ def _split_hostish(raw: str) -> tuple[str, int | None]:
     s = (raw or "").strip()
 
     # Ensure urlsplit can parse host:port reliably
-    if "://" not in s: # noqa: SIM108
+    if "://" not in s:  # noqa: SIM108
         split = urlsplit(f"http://{s}")
     else:
         split = urlsplit(s)
@@ -43,7 +44,7 @@ def _is_ip_address(value: str) -> bool:
     except OSError:
         return False
 
-    # If it resolves without DNS and looks like an IP literal, it’s likely an IP.
+    # If it resolves without DNS and looks like an IP literal, it's likely an IP.
     # (getaddrinfo will also resolve hostnames, so we do a stricter check)
     # Simple heuristic: contains only hex/digits/:/. plus dots.
     allowed = set("0123456789abcdefABCDEF:.")
@@ -82,7 +83,7 @@ class ArednNodeDataUpdateCoordinator(DataUpdateCoordinator):
         effective_port = cfg_port if cfg_port is not None else host_port
 
         # If HTTPS is enabled and the user configured a hostname (not an IP),
-        # don't swap to a resolved IP because TLS certs often won’t match the IP.
+        # don't swap to a resolved IP because TLS certs often won't match the IP.
         should_avoid_ip_swap = use_ssl and not _is_ip_address(host_only)
 
         # Default: poll by the configured hostname/IP
