@@ -25,13 +25,15 @@ def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
 
 
 def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
-    """Parse host input that may contain scheme and/or port.
+    """
+    Parse host input that may contain scheme and/or port.
 
     Returns (host, ssl, port) where ssl may be None if not inferable.
     """
     s = (raw or "").strip()
     if not s:
-        raise ValueError("Empty host")
+        msg = "Empty host"
+        raise ValueError(msg)
 
     # urlsplit needs a scheme to reliably parse host:port
     has_scheme = "://" in s
@@ -39,7 +41,8 @@ def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
 
     host = split.hostname or ""
     if not host:
-        raise ValueError("Invalid host")
+        msg = "Invalid host"
+        raise ValueError(msg)
 
     scheme = (split.scheme or "").lower()
     ssl: bool | None = None
@@ -49,8 +52,9 @@ def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
         ssl = False
 
     port = split.port
-    if port is not None and not (1 <= port <= 65535): # noqa: PLR2004
-        raise ValueError("Invalid port")
+    if port is not None and not (1 <= port <= 65535):  # noqa: PLR2004
+        msg = "Invalid port"
+        raise ValueError(msg)
 
     return host, ssl, port
 
@@ -58,7 +62,7 @@ def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
 class ArednNodeApiClient:
     """AREDn Node API Client."""
 
-    def __init__( # noqa: PLR0913
+    def __init__(  # noqa: PLR0913
         self,
         host: str,
         session: aiohttp.ClientSession,
@@ -69,6 +73,8 @@ class ArednNodeApiClient:
         verify_ssl: bool = True,
     ) -> None:
         """
+        Initialize the API client.
+
         host: hostname/IP, may also be host:port or full URL for backward compat
         ssl: preferred scheme (True=https, False=http). If None, infer from host or default to http.
         port: preferred port. If None, infer from host or default by scheme.
@@ -83,7 +89,11 @@ class ArednNodeApiClient:
 
         # Prefer explicit args from config entry, otherwise infer from host string
         self._host = parsed_host
-        self._ssl = ssl if ssl is not None else (parsed_ssl if parsed_ssl is not None else False)
+        self._ssl = (
+            ssl
+            if ssl is not None
+            else (parsed_ssl if parsed_ssl is not None else False)
+        )
         self._port = port if port is not None else parsed_port
 
     def _base_url(self) -> URL:
@@ -92,7 +102,8 @@ class ArednNodeApiClient:
         return URL.build(scheme=scheme, host=self._host, port=self._port)
 
     def _url_for(self, host_override: str | None = None) -> URL:
-        """Build the full sysinfo URL for either the configured host or an override.
+        """
+        Build the full sysinfo URL for either the configured host or an override.
 
         If the override provides no port, we keep the configured port.
         If the override provides no scheme, we keep the configured scheme.
@@ -114,7 +125,8 @@ class ArednNodeApiClient:
         return base.with_path("/a/sysinfo").with_query({"nodes": "1", "link_info": "1"})
 
     async def async_get_data(self, host: str | None = None) -> Any:
-        """Get data from the API.
+        """
+        Get data from the API.
 
         Optional host override is supported for discovery/resolved IP caching,
         and may include scheme/port.
@@ -137,7 +149,7 @@ class ArednNodeApiClient:
                 # - For http: pass None
                 ssl_param: bool | None = None
                 if url.scheme == "https":
-                    ssl_param = True if self._verify_ssl else False
+                    ssl_param = bool(self._verify_ssl)
 
                 response = await self._session.request(
                     method=method,

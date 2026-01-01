@@ -24,7 +24,8 @@ from .const import DOMAIN, LOGGER
 
 
 def _parse_host_input(raw: str) -> tuple[str, bool, int | None]:
-    """Parse a host input that may include scheme and/or port.
+    """
+    Parse a host input that may include scheme and/or port.
 
     Accepts:
       - localnode.local.mesh
@@ -44,14 +45,16 @@ def _parse_host_input(raw: str) -> tuple[str, bool, int | None]:
 
     host = split.hostname or ""
     if not host:
-        raise ValueError("Invalid host")
+        msg = "Invalid host"
+        raise ValueError(msg)
 
     scheme = (split.scheme or "http").lower()
     ssl = scheme == "https"
 
     port = split.port  # None if not supplied
-    if port is not None and not (1 <= port <= 65535): # noqa: PLR2004
-        raise ValueError("Invalid port")
+    if port is not None and not (1 <= port <= 65535):  # noqa: PLR2004
+        msg = "Invalid port"
+        raise ValueError(msg)
 
     return host, ssl, port
 
@@ -256,7 +259,8 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return await self._get_data(host_input)
 
     async def _get_data(self, host_input: str) -> dict[str, Any]:
-        """Get data from the API.
+        """
+        Get data from the API.
 
         Supports host strings that may include:
           - scheme (http/https)
@@ -291,13 +295,12 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             scheme = "https" if ssl else "http"
             netloc = _format_host_for_storage(host, port)
             kwargs["base_url"] = f"{scheme}://{netloc}"
-        else:
-            # Last resort: if user requested https but the client only accepts "host",
-            # try passing a fully-qualified URL and hope the client treats it as a base URL.
-            if ssl:
-                scheme = "https"
-                netloc = _format_host_for_storage(host, port)
-                host_arg = f"{scheme}://{netloc}"
+        # Last resort: if user requested https but the client only accepts "host",
+        # try passing a fully-qualified URL and hope the client treats it as a base URL.
+        elif ssl:
+            scheme = "https"
+            netloc = _format_host_for_storage(host, port)
+            host_arg = f"{scheme}://{netloc}"
 
         client = ArednNodeApiClient(
             host=host_arg,
