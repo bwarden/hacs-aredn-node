@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SSL
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
@@ -35,9 +35,12 @@ async def async_setup_entry(
         name=DOMAIN,
         update_interval=timedelta(seconds=60),
     )
+
     entry.runtime_data = ArednNodeData(
         client=ArednNodeApiClient(
             host=entry.data[CONF_HOST],
+            ssl=entry.data.get(CONF_SSL),
+            port=entry.data.get(CONF_PORT),
             session=async_get_clientsession(hass),
         ),
         integration=async_get_loaded_integration(hass, entry.domain),
