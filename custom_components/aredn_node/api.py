@@ -49,7 +49,7 @@ def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
         ssl = False
 
     port = split.port
-    if port is not None and not (1 <= port <= 65535):
+    if port is not None and not (1 <= port <= 65535): # noqa: PLR2004
         raise ValueError("Invalid port")
 
     return host, ssl, port
