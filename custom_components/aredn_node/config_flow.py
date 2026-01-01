@@ -50,7 +50,7 @@ def _parse_host_input(raw: str) -> tuple[str, bool, int | None]:
     ssl = scheme == "https"
 
     port = split.port  # None if not supplied
-    if port is not None and not (1 <= port <= 65535):
+    if port is not None and not (1 <= port <= 65535): # noqa: PLR2004
         raise ValueError("Invalid port")
 
     return host, ssl, port
