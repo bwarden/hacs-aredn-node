@@ -58,7 +58,7 @@ def _parse_hostish(raw: str) -> tuple[str, bool | None, int | None]:
 class ArednNodeApiClient:
     """AREDn Node API Client."""
 
-    def __init__(
+    def __init__( # noqa: PLR0913
         self,
         host: str,
         session: aiohttp.ClientSession,
