@@ -85,15 +85,17 @@ class ArednNodeDataUpdateCoordinator(DataUpdateCoordinator):
         # don't swap to a resolved IP because TLS certs often won’t match the IP.
         should_avoid_ip_swap = use_ssl and not _is_ip_address(host_only)
 
+        # Default: poll by the configured hostname/IP
         target_host_only = host_only
 
-        if not should_avoid_ip_swap:
-            resolved_ip = await self._async_resolve_host(host_only)
-            if resolved_ip:
-                self._cached_ip = resolved_ip
-                target_host_only = resolved_ip
-            elif self._cached_ip:
-                target_host_only = self._cached_ip
+        # Always attempt to resolve and refresh the cached IP (for the IP sensor)
+        resolved_ip = await self._async_resolve_host(host_only)
+        if resolved_ip:
+            self._cached_ip = resolved_ip
+
+        # Decide whether to use the cached IP as the poll target
+        if not should_avoid_ip_swap and self._cached_ip:
+            target_host_only = self._cached_ip
 
         # Build the override host string we pass to the client:
         # - If we have a custom port, include it as host:port
