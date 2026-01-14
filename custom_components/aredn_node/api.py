@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import socket
 from typing import Any
 from urllib.parse import urlsplit
@@ -150,6 +151,18 @@ class ArednNodeApiClient:
         headers: dict | None = None,
     ) -> Any:
         """Make an API request and return JSON."""
+        if url.host:
+            try:
+                async with async_timeout.timeout(self._timeout):
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, socket.getaddrinfo, url.host, None)
+            except (socket.gaierror, OSError) as exception:
+                msg = f"DNS resolution error - {exception}"
+                raise ArednNodeApiClientDnsError(msg) from exception
+            except TimeoutError as exception:
+                msg = f"Timeout resolving host - {exception}"
+                raise ArednNodeApiClientDnsError(msg) from exception
+
         try:
             async with async_timeout.timeout(self._timeout):
                 # aiohttp `ssl=`:
@@ -182,12 +195,6 @@ class ArednNodeApiClient:
             msg = f"SSL Certificate error - {exception}"
             raise ArednNodeApiClientCommunicationError(msg) from exception
         except aiohttp.ClientConnectorError as exception:
-            if isinstance(exception.os_error, socket.gaierror) or (
-                isinstance(exception.os_error, OSError)
-                and "Domain name not found" in str(exception.os_error)
-            ):
-                msg = f"DNS resolution error - {exception}"
-                raise ArednNodeApiClientDnsError(msg) from exception
             msg = f"Connection error - {exception}"
             raise ArednNodeApiClientCommunicationError(msg) from exception
         except (aiohttp.ClientError, OSError) as exception:
