@@ -18,7 +18,9 @@ from slugify import slugify
 from .api import (
     ArednNodeApiClient,
     ArednNodeApiClientCommunicationError,
+    ArednNodeApiClientDnsError,
     ArednNodeApiClientError,
+    ArednNodeApiClientResponseError,
 )
 from .const import DOMAIN, LOGGER
 
@@ -90,6 +92,10 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
             except ValueError:
                 errors["base"] = "invalid_host"
+            except ArednNodeApiClientDnsError:
+                errors["base"] = "cannot_resolve_host"
+            except ArednNodeApiClientResponseError:
+                errors["base"] = "api_not_supported"
             except ArednNodeApiClientCommunicationError:
                 errors["base"] = "cannot_connect"
             except ArednNodeApiClientError as e:
@@ -201,6 +207,10 @@ class ArednNodeFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
             except ValueError:
                 _errors["base"] = "invalid_host"
+            except ArednNodeApiClientDnsError:
+                _errors["base"] = "cannot_resolve_host"
+            except ArednNodeApiClientResponseError:
+                _errors["base"] = "api_not_supported"
             except ArednNodeApiClientCommunicationError as exception:
                 LOGGER.error(exception)
                 _errors["base"] = "cannot_connect"

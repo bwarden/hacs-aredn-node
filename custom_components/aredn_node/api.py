@@ -19,6 +19,14 @@ class ArednNodeApiClientCommunicationError(ArednNodeApiClientError):
     """Exception to indicate a communication error."""
 
 
+class ArednNodeApiClientDnsError(ArednNodeApiClientError):
+    """Exception to indicate a DNS resolution error."""
+
+
+class ArednNodeApiClientResponseError(ArednNodeApiClientError):
+    """Exception to indicate a response error."""
+
+
 def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
     """Verify that the response is valid."""
     response.raise_for_status()
@@ -164,7 +172,25 @@ class ArednNodeApiClient:
         except TimeoutError as exception:
             msg = f"Timeout error fetching information - {exception}"
             raise ArednNodeApiClientCommunicationError(msg) from exception
-        except (aiohttp.ClientError, socket.gaierror, OSError) as exception:
+        except socket.gaierror as exception:
+            msg = f"DNS resolution error - {exception}"
+            raise ArednNodeApiClientDnsError(msg) from exception
+        except aiohttp.ClientResponseError as exception:
+            msg = f"Response error - {exception.status}"
+            raise ArednNodeApiClientResponseError(msg) from exception
+        except aiohttp.ClientConnectorCertificateError as exception:
+            msg = f"SSL Certificate error - {exception}"
+            raise ArednNodeApiClientCommunicationError(msg) from exception
+        except aiohttp.ClientConnectorError as exception:
+            if isinstance(exception.os_error, socket.gaierror) or (
+                isinstance(exception.os_error, OSError)
+                and "Domain name not found" in str(exception.os_error)
+            ):
+                msg = f"DNS resolution error - {exception}"
+                raise ArednNodeApiClientDnsError(msg) from exception
+            msg = f"Connection error - {exception}"
+            raise ArednNodeApiClientCommunicationError(msg) from exception
+        except (aiohttp.ClientError, OSError) as exception:
             msg = f"Error fetching information - {exception}"
             raise ArednNodeApiClientCommunicationError(msg) from exception
         except Exception as exception:  # pylint: disable=broad-except

@@ -10,6 +10,8 @@
         },
         "error": {
             "cannot_connect": "Unable to connect to the AREDN node. Please check the host.",
+            "cannot_resolve_host": "Unable to resolve the hostname.",
+            "api_not_supported": "Host does not support AREDN sysinfo API v2.",
             "unknown": "Unknown error occurred."
         },
         "abort": {
