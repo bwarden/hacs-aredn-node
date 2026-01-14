@@ -15,16 +15,20 @@ class ArednNodeEntity(CoordinatorEntity[ArednNodeDataUpdateCoordinator]):
     def __init__(self, coordinator: ArednNodeDataUpdateCoordinator) -> None:
         """Initialize."""
         super().__init__(coordinator)
-        node_details = coordinator.data.get("node_details", {})
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        node_details = self.coordinator.data.get("node_details", {})
         firmware_version = node_details.get("firmware_version")
         model = node_details.get("model")
-        node_name = coordinator.data.get("node")
+        node_name = self.coordinator.data.get("node")
 
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
             name=node_name,
             manufacturer=MANUFACTURER,
             model=model,
             sw_version=firmware_version,
-            configuration_url=f"http://{coordinator.config_entry.data['host']}",
+            configuration_url=f"http://{self.coordinator.config_entry.data['host']}",
         )
