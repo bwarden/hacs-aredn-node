@@ -78,6 +78,13 @@ ENTITY_DESCRIPTIONS: tuple[ArednNodeSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("gridsquare"),
     ),
     ArednNodeSensorEntityDescription(
+        key="firmware_version",
+        name="Firmware Version",
+        icon="mdi:chip",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("node_details", {}).get("firmware_version"),
+    ),
+    ArednNodeSensorEntityDescription(
         key="freememory",
         name="Free Memory",
         native_unit_of_measurement=UnitOfInformation.KILOBYTES,
